@@ -1,0 +1,348 @@
+{% extends "base.html" %}
+
+{% block title %}API Documentation — Like Manager{% endblock %}
+
+{% block content %}
+<style>
+    .docs-layout {
+        display: grid;
+        grid-template-columns: 220px 1fr;
+        gap: 32px;
+        align-items: start;
+    }
+
+    /* ─── SIDEBAR ─── */
+    .docs-sidebar {
+        position: sticky;
+        top: 88px;
+        animation: fadeUp 0.4s cubic-bezier(0.16,1,0.3,1) both;
+    }
+
+    .sidebar-label {
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 1.2px;
+        text-transform: uppercase;
+        color: var(--gray-400);
+        margin-bottom: 12px;
+        padding: 0 4px;
+    }
+
+    .sidebar-nav { display: flex; flex-direction: column; gap: 2px; }
+
+    .sidebar-link {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 9px 12px;
+        border-radius: 8px;
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--gray-500);
+        text-decoration: none;
+        transition: all 0.15s;
+        border: 1px solid transparent;
+    }
+
+    .sidebar-link:hover {
+        background: var(--gray-100);
+        color: var(--white);
+        border-color: var(--border);
+    }
+
+    .sidebar-link .method-badge {
+        font-family: ui-monospace, monospace;
+        font-size: 9px;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+        padding: 2px 6px;
+        border-radius: 4px;
+        background: rgba(96,165,250,0.15);
+        color: var(--info);
+        border: 1px solid rgba(96,165,250,0.2);
+    }
+
+    /* ─── MAIN ─── */
+    .docs-main {
+        min-width: 0;
+        animation: fadeUp 0.4s 0.05s cubic-bezier(0.16,1,0.3,1) both;
+    }
+
+    .docs-title {
+        font-size: 32px;
+        font-weight: 800;
+        letter-spacing: -1px;
+        margin-bottom: 6px;
+    }
+
+    .docs-subtitle {
+        font-size: 14px;
+        color: var(--gray-500);
+        margin-bottom: 36px;
+    }
+
+    /* ─── ENDPOINT CARD ─── */
+    .endpoint-card {
+        margin-bottom: 24px;
+    }
+
+    .endpoint-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 20px;
+    }
+
+    .method-tag {
+        font-family: ui-monospace, monospace;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+        padding: 4px 10px;
+        border-radius: 6px;
+        background: rgba(96,165,250,0.12);
+        color: var(--info);
+        border: 1px solid rgba(96,165,250,0.2);
+    }
+
+    .endpoint-title {
+        font-size: 18px;
+        font-weight: 700;
+    }
+
+    .endpoint-number {
+        margin-left: auto;
+        font-size: 11px;
+        color: var(--gray-400);
+        font-family: ui-monospace, monospace;
+    }
+
+    /* ─── ENDPOINT URL ─── */
+    .endpoint-url {
+        background: var(--gray-200);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 14px 18px;
+        font-family: ui-monospace, monospace;
+        font-size: 13px;
+        color: var(--accent);
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        overflow-x: auto;
+    }
+
+    .endpoint-url .method-inline {
+        color: var(--info);
+        font-weight: 700;
+        flex-shrink: 0;
+    }
+
+    /* ─── PARAMS TABLE ─── */
+    .params-label {
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        color: var(--gray-500);
+        margin-bottom: 12px;
+    }
+
+    .params-table { margin-bottom: 20px; }
+
+    .params-table th {
+        font-size: 10px;
+        letter-spacing: 0.8px;
+    }
+
+    .param-name {
+        font-family: ui-monospace, monospace;
+        font-size: 13px;
+        color: var(--white);
+    }
+
+    .param-required {
+        display: inline-flex;
+        padding: 1px 7px;
+        border-radius: 4px;
+        font-size: 10px;
+        font-weight: 700;
+        background: rgba(251,191,36,0.1);
+        color: var(--warning);
+        border: 1px solid rgba(251,191,36,0.2);
+    }
+
+    .param-desc {
+        font-size: 13px;
+        color: var(--gray-500);
+    }
+
+    /* ─── COPY BUTTON ─── */
+    .code-block-wrapper { position: relative; }
+
+    .copy-btn {
+        position: absolute;
+        top: 12px;
+        right: 12px;
+        background: var(--gray-300);
+        border: none;
+        border-radius: 6px;
+        color: var(--gray-500);
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.3px;
+        padding: 4px 10px;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-family: ui-monospace, monospace;
+    }
+
+    .copy-btn:hover { background: var(--gray-400); color: var(--white); }
+    .copy-btn.copied { background: rgba(74,222,128,0.2); color: var(--success); }
+
+    @media (max-width: 768px) {
+        .docs-layout { grid-template-columns: 1fr; }
+        .docs-sidebar { position: static; }
+    }
+</style>
+
+<div class="docs-layout">
+    <!-- SIDEBAR -->
+    <aside class="docs-sidebar">
+        <div class="sidebar-label">Endpoints</div>
+        <nav class="sidebar-nav">
+            <a href="#send-likes" class="sidebar-link">
+                <span class="method-badge">GET</span>
+                Send Likes
+            </a>
+            <a href="#refresh-tokens" class="sidebar-link">
+                <span class="method-badge">GET</span>
+                Refresh Tokens
+            </a>
+        </nav>
+    </aside>
+
+    <!-- MAIN -->
+    <main class="docs-main">
+        <h1 class="docs-title">API Reference</h1>
+        <p class="docs-subtitle">Base URL: <code>http://localhost:5000</code></p>
+
+        <!-- SEND LIKES -->
+        <div class="card endpoint-card" id="send-likes">
+            <div class="endpoint-header">
+                <span class="method-tag">GET</span>
+                <span class="endpoint-title">Send Likes</span>
+                <span class="endpoint-number">01</span>
+            </div>
+
+            <div class="endpoint-url">
+                <span class="method-inline">GET</span>
+                /api/likes?uid={uid}&server_name={server}&key={your_api_key}
+            </div>
+
+            <div class="params-label">Parameters</div>
+            <table class="params-table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Type</th>
+                        <th>Required</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><span class="param-name">uid</span></td>
+                        <td style="color:var(--gray-500);font-size:12px;font-family:ui-monospace,monospace">string</td>
+                        <td><span class="param-required">required</span></td>
+                        <td><span class="param-desc">Target user ID to send likes to</span></td>
+                    </tr>
+                    <tr>
+                        <td><span class="param-name">server_name</span></td>
+                        <td style="color:var(--gray-500);font-size:12px;font-family:ui-monospace,monospace">string</td>
+                        <td><span class="param-required">required</span></td>
+                        <td><span class="param-desc">Server region: IND, BR, US, SAC, NA, BD</span></td>
+                    </tr>
+                    <tr>
+                        <td><span class="param-name">key</span></td>
+                        <td style="color:var(--gray-500);font-size:12px;font-family:ui-monospace,monospace">string</td>
+                        <td><span class="param-required">required</span></td>
+                        <td><span class="param-desc">Your API key</span></td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="params-label">Example Request</div>
+            <div class="code-block-wrapper">
+                <pre>curl "http://localhost:5000/api/likes?uid=4119418341&server_name=IND&key=your_key"</pre>
+                <button class="copy-btn" onclick="copyCode(this, 'curl &quot;http://localhost:5000/api/likes?uid=4119418341&server_name=IND&key=your_key&quot;')">copy</button>
+            </div>
+
+            <div class="params-label" style="margin-top:20px">Response</div>
+            <div class="code-block-wrapper">
+                <pre>{
+    "LikesGivenByAPI": 200,
+    "LikesafterCommand": 66329,
+    "LikesbeforeCommand": 66129,
+    "PlayerNickname": "FlexXyZ Hx¿!",
+    "UID": 1738283841,
+    "status": 1
+}</pre>
+                <button class="copy-btn" onclick="copyCode(this)">copy</button>
+            </div>
+        </div>
+
+        <!-- REFRESH TOKENS -->
+        <div class="card endpoint-card" id="refresh-tokens">
+            <div class="endpoint-header">
+                <span class="method-tag">GET</span>
+                <span class="endpoint-title">Refresh Tokens</span>
+                <span class="endpoint-number">02</span>
+            </div>
+
+            <div class="endpoint-url">
+                <span class="method-inline">GET</span>
+                /api/refresh/{your_api_key}
+            </div>
+
+            <div class="params-label">Path Parameters</div>
+            <table class="params-table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Type</th>
+                        <th>Required</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><span class="param-name">your_api_key</span></td>
+                        <td style="color:var(--gray-500);font-size:12px;font-family:ui-monospace,monospace">string</td>
+                        <td><span class="param-required">required</span></td>
+                        <td><span class="param-desc">The API key whose tokens to refresh</span></td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="params-label">Example Request</div>
+            <div class="code-block-wrapper">
+                <pre>curl "http://localhost:5000/api/refresh/your_key"</pre>
+                <button class="copy-btn" onclick="copyCode(this, 'curl &quot;http://localhost:5000/api/refresh/your_key&quot;')">copy</button>
+            </div>
+        </div>
+    </main>
+</div>
+
+<script>
+function copyCode(btn, text) {
+    const code = text || btn.previousElementSibling.textContent;
+    navigator.clipboard.writeText(code).then(() => {
+        btn.textContent = 'copied!';
+        btn.classList.add('copied');
+        setTimeout(() => { btn.textContent = 'copy'; btn.classList.remove('copied'); }, 2000);
+    });
+}
+</script>
+{% endblock %}

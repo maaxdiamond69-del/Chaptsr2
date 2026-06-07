@@ -1,0 +1,263 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard — Like Manager{% endblock %}
+
+{% block content %}
+<style>
+    .dash-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        margin-bottom: 28px;
+        animation: fadeUp 0.4s cubic-bezier(0.16,1,0.3,1) both;
+    }
+
+    .dash-title { font-size: 30px; font-weight: 800; letter-spacing: -0.8px; }
+    .dash-meta  { font-size: 13px; color: var(--gray-500); margin-top: 4px; }
+
+    /* ─── COUNTDOWN ─── */
+    .countdown-timer {
+        font-family: ui-monospace, monospace;
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--warning);
+        letter-spacing: 0.5px;
+    }
+
+    .countdown-timer.soon { color: var(--danger); }
+
+    /* ─── TOGGLE PILL ─── */
+    .toggle-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 10px;
+        border-radius: 100px;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+        text-decoration: none;
+        border: none;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .toggle-on  { background: rgba(74,222,128,0.12); color: var(--success); border: 1px solid rgba(74,222,128,0.2); }
+    .toggle-off { background: var(--gray-200); color: var(--gray-500); border: 1px solid var(--border); }
+
+    .toggle-on::before  { content: '\f111'; font-family: 'Font Awesome 6 Free'; font-size: 8px; color: var(--success); font-weight: 900; }
+    .toggle-off::before { content: '\f111'; font-family: 'Font Awesome 6 Free'; font-size: 8px; font-weight: 400; }
+
+    /* ─── EMPTY STATE ─── */
+    .empty-state {
+        text-align: center;
+        padding: 64px 24px;
+        color: var(--gray-500);
+    }
+
+    .empty-icon  { font-size: 40px; margin-bottom: 16px; opacity: 0.5; }
+    .empty-title { font-size: 18px; font-weight: 700; color: var(--gray-600); margin-bottom: 8px; }
+    .empty-sub   { font-size: 14px; margin-bottom: 24px; }
+
+    /* ─── TABLE ─── */
+    .table-wrapper { overflow-x: auto; }
+
+    tbody tr { animation: fadeUp 0.35s cubic-bezier(0.16,1,0.3,1) both; }
+    {% for i in range(20) %}
+    tbody tr:nth-child({{ i+1 }}) { animation-delay: {{ i * 0.04 }}s; }
+    {% endfor %}
+
+    .key-cell {
+        font-family: ui-monospace, monospace;
+        font-size: 12px;
+        color: var(--white);
+        max-width: 180px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .rate-bar-wrapper {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .rate-bar {
+        flex: 1;
+        height: 4px;
+        background: var(--gray-300);
+        border-radius: 2px;
+        overflow: hidden;
+        min-width: 60px;
+    }
+
+    .rate-fill {
+        height: 100%;
+        border-radius: 2px;
+        background: var(--success);
+        transition: width 1s cubic-bezier(0.16,1,0.3,1);
+    }
+
+    .rate-label { font-size: 12px; font-family: ui-monospace, monospace; color: var(--gray-500); }
+
+    /* ─── QUICK STAT ─── */
+    .stat-card .stat-icon {
+        font-size: 20px;
+        margin-bottom: 12px;
+        opacity: 0.5;
+    }
+</style>
+
+<div class="dash-header">
+    <div>
+        <h1 class="dash-title">Dashboard</h1>
+        <p class="dash-meta"><i class="fa fa-clock-o"></i> Tokens auto-refresh every 6 hours</p>
+    </div>
+    <a href="/generate-key" class="btn btn-primary"><i class="fa fa-plus"></i> New Key</a>
+</div>
+
+<!-- STATS -->
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-icon"><i class="fa fa-key"></i></div>
+        <div class="stat-value">{{ keys|length }}</div>
+        <div class="stat-label">Total Keys</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon"><i class="fa fa-user"></i></div>
+        <div class="stat-value">{{ keys|sum(attribute='uid_count') }}</div>
+        <div class="stat-label">Total UIDs</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon"><i class="fa fa-bolt"></i></div>
+        <div class="stat-value">{{ keys|sum(attribute='token_count') }}</div>
+        <div class="stat-label">Active Tokens</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon"><i class="fa fa-refresh"></i></div>
+        <div class="stat-value" id="keys-refreshing">0</div>
+        <div class="stat-label">Refreshing Soon</div>
+    </div>
+</div>
+
+<!-- TABLE CARD -->
+<div class="card" style="animation-delay:0.15s">
+    <div class="section-header">
+        <span class="section-title">API Keys</span>
+    </div>
+
+    {% if keys %}
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>API Key</th>
+                    <th>UIDs</th>
+                    <th>Tokens</th>
+                    <th>Success Rate</th>
+                    <th>Last Refresh</th>
+                    <th>Next Refresh</th>
+                    <th>Auto</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for key in keys %}
+                <tr>
+                    <td>
+                        <span class="key-cell" title="{{ key.key }}">{{ key.key }}</span>
+                    </td>
+                    <td style="font-family:ui-monospace,monospace;font-size:13px;">{{ key.uid_count }}</td>
+                    <td style="font-family:ui-monospace,monospace;font-size:13px;">{{ key.token_count }}</td>
+                    <td>
+                        {% if key.uid_count > 0 %}
+                        {% set pct = ((key.successful_uids / key.uid_count) * 100)|round %}
+                        <div class="rate-bar-wrapper">
+                            <div class="rate-bar">
+                                <div class="rate-fill" style="width:{{ pct }}%"></div>
+                            </div>
+                            <span class="rate-label">{{ pct }}%</span>
+                        </div>
+                        {% else %}
+                        <span style="color:var(--gray-400);font-size:13px;">—</span>
+                        {% endif %}
+                    </td>
+                    <td style="font-size:12px;color:var(--gray-500);font-family:ui-monospace,monospace;">
+                        {{ key.last_refresh or '—' }}
+                    </td>
+                    <td>
+                        {% if key.auto_refresh %}
+                        <span class="countdown-timer" data-key="{{ key.key }}"
+                              data-time="{{ key.time_until_refresh }}">
+                            {{ key.time_until_refresh }}
+                        </span>
+                        {% else %}
+                        <span style="color:var(--gray-400);font-size:12px;">Disabled</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <a href="/toggle-auto-refresh/{{ key.key }}"
+                           class="toggle-pill {{ 'toggle-on' if key.auto_refresh else 'toggle-off' }}">
+                            {{ 'ON' if key.auto_refresh else 'OFF' }}
+                        </a>
+                    </td>
+                    <td>
+                        <div class="action-buttons">
+                            <a href="/refresh-token/{{ key.key }}" class="btn btn-warning btn-sm"
+                               onclick="return confirm('Refresh tokens for this key?')">
+                                <i class="fa fa-refresh"></i> Refresh
+                            </a>
+                            <a href="/delete-key/{{ key.key }}" class="btn btn-danger btn-sm"
+                               onclick="return confirm('Delete key {{ key.key }}?')">
+                                <i class="fa fa-trash"></i> Delete
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-icon"><i class="fa fa-key"></i></div>
+        <div class="empty-title">No API keys yet</div>
+        <div class="empty-sub">Generate your first key to get started</div>
+        <a href="/generate-key" class="btn btn-primary"><i class="fa fa-plus"></i> Generate Key <i class="fa fa-arrow-right"></i></a>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+function updateCountdowns() {
+    document.querySelectorAll('.countdown-timer').forEach(function(timer) {
+        var timeStr = timer.getAttribute('data-time');
+        if (timeStr && timeStr !== 'Calculating...' && timeStr !== 'Refreshing soon...') {
+            var parts = timeStr.split(':');
+            var hours   = parseInt(parts[0]) || 0;
+            var minutes = parseInt(parts[1]) || 0;
+            var seconds = parseInt(parts[2]) || 0;
+
+            if (seconds > 0)        seconds--;
+            else if (minutes > 0) { minutes--; seconds = 59; }
+            else if (hours > 0)   { hours--;   minutes = 59; seconds = 59; }
+
+            var newTime = String(hours).padStart(2,'0') + ':' +
+                          String(minutes).padStart(2,'0') + ':' +
+                          String(seconds).padStart(2,'0');
+            timer.textContent = newTime;
+            timer.setAttribute('data-time', newTime);
+
+            if (hours === 0 && minutes < 30) timer.classList.add('soon');
+        }
+    });
+
+    var soonCount = document.querySelectorAll('.countdown-timer.soon').length;
+    document.getElementById('keys-refreshing').textContent = soonCount;
+}
+
+setInterval(updateCountdowns, 1000);
+updateCountdowns();
+</script>
+{% endblock %}

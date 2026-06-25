@@ -319,7 +319,7 @@ async def send_single_like(session, encrypted_uid, token, url, semaphore):
             'Content-Type': "application/x-www-form-urlencoded",
             'X-Unity-Version': "2018.4.11f1",
             'X-GA': "v1 1",
-            'ReleaseVersion': "OB53"
+            'ReleaseVersion': "OB54"
         }
         
         for retry in range(3):
@@ -384,7 +384,7 @@ def make_request(encrypt, server_name, token):
         'Content-Type': "application/x-www-form-urlencoded",
         'X-Unity-Version': "2018.4.11f1",
         'X-GA': "v1 1",
-        'ReleaseVersion': "OB53"
+        'ReleaseVersion': "OB54"
     }
     
     for retry in range(3):
